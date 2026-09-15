@@ -107,8 +107,8 @@ PATH from xAI's installer.
 
 ### Option B: the native ARM64 alpha build
 
-Same shape as option A, but the download is the ARM64 build of alpha 1.0.32, and the downloaded
-file has to complete a TLS handshake before it goes anywhere near the install. The backup folder is
+This block follows option A, except that the download is the ARM64 build of alpha 1.0.32 and the
+downloaded file has to complete a TLS handshake before it goes anywhere near the install. The backup folder is
 named after the architecture of the files it holds, so it works whether the install is the original
 ARM64 build or already swapped by option A.
 
@@ -163,7 +163,7 @@ Run against a copy of an option-A install (x64 1.0.30) in a scratch folder, this
 answers `update --check --json` and `-p "reply pong"`. The prompt runs inside `grok.exe` with no
 `agent.exe` child, so that test does not exercise the native `agent.exe`.
 
-The trade-off is the alpha channel itself, which xAI describes as "faster updates, may have bugs".
+The cost is running an alpha build, which xAI describes as "faster updates, may have bugs".
 See "Gotchas" for how updates behave after this swap.
 
 ## Verify
@@ -258,8 +258,8 @@ Get-ChildItem "$env:LOCALAPPDATA\CrashDumps" | Where-Object Name -match grok
 ```
 
 There were seven events in a few minutes, all `0xC00000FD` in `grok.exe` at fault offset
-`0x60bcdc8`. The same offset every time means the same code site every time, so this is
-deterministic and not a flake. Windows Error Reporting had also written minidumps to `CrashDumps`,
+`0x60bcdc8`. The same offset every time means the same code site every time, so the crash is
+deterministic. Windows Error Reporting had also written minidumps to `CrashDumps`,
 but no debugger was installed to read them, and the trace log below made that unnecessary.
 
 Filter on `grok.exe`. The same log can hold fail-fasts from unrelated processes, such as
@@ -343,7 +343,7 @@ WARN  ... Failed to fetch models error=RequestFailed { status: 400, ... "Incorre
 ```
 
 It completed TLS 1.3 sessions with `api.x.ai`, `auth.x.ai` and `cli-chat-proxy.grok.com` and got
-HTTP responses back, which is the basis for option A.
+HTTP responses back.
 
 ### Check newer builds
 
@@ -368,8 +368,8 @@ DEBUG run_update_command: rustls::client::hs: ALPN protocol is Some(b"h2")
 pong
 ```
 
-The trace passes the point where 1.0.30 dies, the device-code flow reaches `accounts.x.ai`, and a
-signed-in prompt gets a model reply. Option B rests on these results.
+The trace gets past the point where 1.0.30 dies, the device-code flow reaches `accounts.x.ai`, and
+a signed-in prompt gets a model reply.
 
 ## Related
 

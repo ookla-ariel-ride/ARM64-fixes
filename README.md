@@ -1,8 +1,8 @@
 # ARM64-fixes
 
-Tested workarounds for developer CLIs that fail on Windows on ARM laptops (Snapdragon X). Each
-page names the exact error, gives a PowerShell block that applies the fix safely, and records the
-evidence behind it so the fix can be checked again when the tool updates.
+Tested workarounds for developer CLIs that fail on Windows on ARM laptops (Snapdragon X). Each page
+starts from the exact error message and gives a PowerShell block that applies the fix. The evidence
+for each fix is on the same page, so it can be rechecked after the tool updates.
 
 ## Fixes
 
@@ -17,8 +17,8 @@ You need Windows 11 on ARM64 and PowerShell 7. The Grok fix uses the `curl.exe` 
 Windows; the OpenCode fix needs npm, because OpenCode is installed with `npm i -g opencode-ai`.
 
 1. Find your error message in the table and open that page.
-2. Run the page's Fix block in PowerShell 7. The block checks the download before it changes
-   anything, copies the original binary into a backup folder, and stops at the first failure.
+2. Run the page's Fix block in PowerShell 7. It validates the download and backs up the original
+   binary before it replaces anything, and it stops at the first failure.
 3. Run the commands under Verify.
 4. If you want the original back, run the Revert block.
 
@@ -26,8 +26,8 @@ Updating the tool usually puts the broken ARM64 build back. After any update, ru
 commands again before relying on it.
 
 Every page has the same sections: Symptom, Cause, Fix, Verify, Gotchas, Revert and Diagnosis. The
-Diagnosis section lists the commands that found the cause, and most of them work unchanged on the
-next tool that fails the same way.
+Diagnosis section lists the commands that found the cause, which you can reuse on the next tool
+that fails in a similar way.
 
 ## Test machine
 
@@ -38,8 +38,8 @@ each result applies to.
 
 ## Reporting results
 
-If a fix stops working or a new release changes the picture, open an issue with the tool version,
-your Windows build (`winver`), and the full output of the page's Verify commands.
+If a fix stops working, or a new release makes the native ARM64 build work, open an issue. Include
+the tool version, your Windows build from `winver`, and the full output of the page's Verify commands.
 
 ## Secret scanning
 

@@ -310,9 +310,8 @@ foreach ($v in '1.18.26', '1.18.27', '1.18.28', '1.18.29', '1.18.30', '1.18.31')
 
 A plain `npm install` of `opencode-windows-x64` on ARM64 produces no binary and no error, because npm
 skips a package whose declared `cpu` does not match the host and `--silent` hides the warning. With
-`--cpu x64 --os win32 --force` it installs, and the binary passes `--version`, `auth list` and
-`models` under emulation, and its TUI stays up under `Test-OpenCodeTui`. That is the basis for the
-fix.
+`--cpu x64 --os win32 --force` it installs. Under emulation the binary passes `--version`,
+`auth list` and `models`, and its TUI stays up under `Test-OpenCodeTui`.
 
 ## Related
 
