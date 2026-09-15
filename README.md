@@ -50,3 +50,7 @@ hook and on GitHub by the `gitleaks` workflow. To turn on the hook in your clone
 winget install Gitleaks.Gitleaks
 git config core.hooksPath .githooks
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
