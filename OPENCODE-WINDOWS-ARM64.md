@@ -8,8 +8,7 @@ without re-deriving it.
 
 Last reviewed: 2026-09-15, OpenCode 1.18.31 installed with `npm i -g opencode-ai`, Samsung Galaxy
 Book4 Edge (Snapdragon X Elite), Windows 11 ARM64 Insider build 29667, PowerShell 7.6.5, Node 26.7.0.
-First written: 2026-09-12 on OpenCode 1.18.30 and Windows build 29648. 1.18.31 was also seen to fail
-the same way on a second ARM64 laptop.
+The same 1.18.31 failure also shows on a second ARM64 laptop.
 
 ## Symptom
 
@@ -21,10 +20,10 @@ Error: Unexpected error
 Failed to initialize OpenTUI render library: bun:ffi dlopen() is not available in this build (TinyCC is disabled)
 ```
 
-Commands that do not draw a screen are not a reliable signal. On 2026-09-12, `auth list`, `models`
-and `run` all failed with the same message on 1.18.30. On 2026-09-15 the byte-identical binary ran
-`auth list` and `models` successfully and still failed to start the TUI. That difference was not
-explained. `opencode --version` worked on every run.
+Commands that do not draw a screen are not a reliable signal. `auth list`, `models` and `run` have
+failed with the same message on 1.18.30 in one session and succeeded with the byte-identical binary
+in another, while the TUI failed both times. The difference is unexplained. `opencode --version`
+always works.
 
 There are no crash events in the Windows Application log, because this is a clean error exit rather
 than a native fault. OpenCode's own log under `~\.local\share\opencode\log` gets nothing from the
@@ -37,9 +36,9 @@ OpenCode is compiled with Bun. Its terminal renderer, OpenTUI, loads a native DL
 FFI, has no ARM64 backend. An OpenCode ARM64 binary built with such a Bun cannot start its renderer.
 
 Every OpenCode ARM64 release tested, 1.18.26 through 1.18.31, embeds Bun 1.3.14 and fails to start
-the TUI. This is not a regression in one release. Bun 1.4.0, released 2026-08-20, has an
-engine-native FFI, but OpenCode has not moved to it. The upstream issues have been open since March;
-the details are under "Diagnosis".
+the TUI, so the problem is at least as old as 1.18.26. Bun 1.4.0, released 2026-08-20, has an
+engine-native FFI, but OpenCode still builds with 1.3.14. The upstream issues have been open since
+March; the details are under "Diagnosis".
 
 ## Fix
 
@@ -96,11 +95,11 @@ Remove-Item $t -Recurse -Force
 ```
 
 If the block throws at step 1 or 2, the install is untouched. If it throws at step 3 or 4, the
-backup folder holds the original and "Revert" puts it back. The block ran unchanged against 1.18.30
-on 2026-09-12 and against 1.18.31 on 2026-09-15.
+backup folder holds the original and "Revert" puts it back. The block works unchanged on 1.18.30
+and 1.18.31.
 
 `opencode-windows-x64-baseline` is the build for CPUs without AVX2. Windows 11's emulator provides
-AVX2 on this build, and the regular x64 package ran without complaint, so the baseline package was
+AVX2 on this build, and the regular x64 package runs without complaint, so the baseline package is
 not needed.
 
 ### 2. Turn off self-update
@@ -121,7 +120,7 @@ Or for the user environment:
 ```
 
 Both switches come from the 1.18.31 binary's own update check, which returns early when the global
-config has `autoupdate === false` or `OPENCODE_DISABLE_AUTOUPDATE` is set. Neither was tested
+config has `autoupdate === false` or `OPENCODE_DISABLE_AUTOUPDATE` is set. Neither has been tested
 against a pending upgrade. Updates then become manual: install the new version, rerun step 1, and
 run the TUI check under "Verify".
 
@@ -163,11 +162,11 @@ stays empty.
 
 ## Gotchas
 
-OpenCode's self-update is the likeliest way to lose the fix. On 2026-09-15, launching the swapped
-x64 1.18.30 TUI logged `message=upgraded method=npm target=1.18.31`, and afterwards
-`bin\opencode.exe` was the ARM64 build and the `arm64-1.18.30-backup` folder was gone with the old
-package directory. npm had reported the package's `postinstall` script as not allowed, and the ARM64
-binary was in place anyway. Step 2 of the fix exists because of this.
+OpenCode's self-update undoes the fix. Launching the TUI of a swapped install while a newer release
+exists logs `message=upgraded method=npm target=<version>`. Afterwards `bin\opencode.exe` is the
+ARM64 build again, and the `arm64-*-backup` folder is gone along with the old package directory.
+npm reports the package's `postinstall` script as not allowed, and the ARM64 binary still ends up in
+place.
 
 `npm update -g`, `npm i -g opencode-ai`, or any other reinstall of the package also undoes step 1.
 After any update, run the TUI check before trusting it.
@@ -211,7 +210,7 @@ Remove-Item $bak.FullName -Recurse
 ```
 
 Reverting puts back a build whose TUI does not start. If the backup folder is gone, the same file is
-on npm as `opencode-windows-arm64@<version>`; the 1.18.30 backup and a fresh npm copy had the same
+on npm as `opencode-windows-arm64@<version>`; a backup and a fresh npm copy of 1.18.30 have the same
 hash. Remove the self-update switch from step 2 as well if you want updates back.
 
 ## Diagnosis
@@ -225,9 +224,10 @@ Get-Command opencode -All | Select-Object Name, CommandType, Source
 Get-Content "$env:APPDATA\npm\opencode.cmd"      # names node_modules\opencode-ai\bin\opencode.exe
 ```
 
-The `opencode-ai` package lists one optional dependency per platform. On this machine npm resolved
-`opencode-windows-arm64`, and the package's `postinstall.mjs` copied its binary into `bin\`. Reading
-the PE header with the `Get-PeMachine` helper from the fix block confirmed a native ARM64 file:
+The `opencode-ai` package lists one optional dependency per platform. On an ARM64 machine npm
+resolves `opencode-windows-arm64`, and the package's `postinstall.mjs` copies its binary into
+`bin\`. Reading the PE header with the `Get-PeMachine` helper from the fix block confirms a native
+ARM64 file:
 
 ```powershell
 Get-PeMachine "$env:APPDATA\npm\node_modules\opencode-ai\bin\opencode.exe"   # ARM64
@@ -242,13 +242,10 @@ $oc = "$env:APPDATA\npm\node_modules\opencode-ai\bin\opencode.exe"
 & $oc --log-level DEBUG --print-logs run "reply with the word pong"
 ```
 
-On 2026-09-12 all three printed the OpenTUI error and exited 1. `--print-logs` produced nothing,
-which placed the failure before OpenCode's logging starts. No new file appeared under
-`~\.local\share\opencode\log`; the only log there was from 2026-09-01. It showed a normal boot, but
-not which build or which command, so it does not show that a native TUI ever worked here.
-
-On 2026-09-15 the first two commands succeeded with the same binary, so this reproduction is not
-dependable. Use `Test-OpenCodeTui` from "Verify" instead.
+When these fail, all three print the OpenTUI error and exit 1, `--print-logs` produces nothing, and
+no file appears under `~\.local\share\opencode\log`. That places the failure before OpenCode's
+logging starts. As the Symptom section says, these commands do not fail every time, so use
+`Test-OpenCodeTui` from "Verify" for a dependable reproduction.
 
 ### Check the event log
 
@@ -257,7 +254,7 @@ Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = (Get-Date)
     Where-Object { $_.Message -match 'opencode|bun\.exe' } | Select-Object TimeCreated, ProviderName
 ```
 
-Nothing. The error is a controlled exit, and the message itself names the cause.
+No events turn up. The error is a controlled exit, and the message itself names the cause.
 
 ### Find the upstream issue
 
@@ -267,29 +264,26 @@ The error text is distinctive enough to search the tracker directly:
 gh issue list -R anomalyco/opencode --state all --search "TinyCC" --limit 10
 ```
 
-Issues describing this error on Windows ARM64: #19130 (March 2026), #20767 (April), #38520 (July)
-and #45875 (28 August 2026). All four were still open on 2026-09-15. #45875 is the clearest
-write-up. It names two gaps:
+Issues describing this error on Windows ARM64, all open: #19130 (March 2026), #20767 (April),
+#38520 (July) and #45875 (28 August 2026). #45875 is the clearest write-up. It names two gaps:
 
 - Stable Bun ships `bun:ffi` compiled out on `windows-aarch64`, so OpenTUI cannot load its DLL.
   Fixed by building with Bun 1.4.0 or later, which has an engine-native FFI. PR #44946 moves the
-  embedded Bun to 1.4.2; on 2026-09-15 it was open with passing checks and unmerged, and the
-  repository's `packageManager` was still `bun@1.3.14`.
+  embedded Bun to 1.4.2. It has passing checks but is not merged, and the repository's
+  `packageManager` is still `bun@1.3.14`.
 - `bun-pty` 0.4.8 ships only an x64 `rust_pty.dll`, which an ARM64 process cannot load, so shell
-  sessions through `#pty` fail. A Windows ARM64 build is proposed in `sursaone/bun-pty#46`, still
-  open on 2026-09-15; the newest `bun-pty` release was 0.4.10 from June.
+  sessions through `#pty` fail. A Windows ARM64 build is proposed in `sursaone/bun-pty#46`, which is
+  open; the newest `bun-pty` release is 0.4.10 from June.
 
-Related and also open on 2026-09-15: PR #44665 ("fix(install): support windows-arm64"), issue
-#44664 (the installer rejects `windows-arm64`), and issues #48518 and #49059, which are about the
-Windows ARM64 desktop installer rather than the CLI. PR #45844 ("use x64 build on Windows ARM64
-(native build lacks bun:ffi)") was closed unmerged.
+Related and also open: PR #44665 ("fix(install): support windows-arm64"), issue #44664 (the
+installer rejects `windows-arm64`), and issues #48518 and #49059, which are about the Windows ARM64
+desktop installer rather than the CLI. PR #45844 ("use x64 build on Windows ARM64 (native build
+lacks bun:ffi)") was closed unmerged.
 
 ### Test every ARM64 release
 
-The first version of this page bisected releases with `auth list` and concluded that only 1.18.30
-was broken. That was wrong: `auth list` passes on every release below while the TUI fails on all of
-them. The re-check on 2026-09-15 installed each ARM64 platform package to a scratch prefix and ran
-its binary three ways:
+`auth list` cannot find this bug, because it passes on every release below while the TUI fails on
+all of them. Install each ARM64 platform package to a scratch prefix and run its binary three ways:
 
 ```powershell
 foreach ($v in '1.18.26', '1.18.27', '1.18.28', '1.18.29', '1.18.30', '1.18.31') {
@@ -314,14 +308,15 @@ foreach ($v in '1.18.26', '1.18.27', '1.18.28', '1.18.29', '1.18.30', '1.18.31')
 
 ### Confirm with the x64 build
 
-The first attempt to install `opencode-windows-x64` produced no binary and no error, because npm
-skips a package whose declared `cpu` does not match the host and `--silent` hid the warning. With
-`--cpu x64 --os win32 --force` it installed, and the binary passed `--version`, `auth list` and
-`models` under emulation, and its TUI stays up under `Test-OpenCodeTui`. That was enough to apply
-the swap.
+A plain `npm install` of `opencode-windows-x64` on ARM64 produces no binary and no error, because npm
+skips a package whose declared `cpu` does not match the host and `--silent` hides the warning. With
+`--cpu x64 --os win32 --force` it installs, and the binary passes `--version`, `auth list` and
+`models` under emulation, and its TUI stays up under `Test-OpenCodeTui`. That is the basis for the
+fix.
 
 ## Related
 
-- `GROK-CLI-WINDOWS-ARM64.md`: the same shape of problem in xAI's Grok CLI, fixed the same way.
+- [`GROK-CLI-WINDOWS-ARM64.md`](GROK-CLI-WINDOWS-ARM64.md): the same shape of problem in xAI's Grok
+  CLI, fixed the same way.
 - Upstream: `https://github.com/anomalyco/opencode/issues/45875` and
   `https://github.com/anomalyco/opencode/pull/44946`.

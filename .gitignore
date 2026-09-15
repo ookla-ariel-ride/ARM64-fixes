@@ -1,0 +1,57 @@
+# ---- Coding agent state (never part of this repo) ----
+# Local settings, memories, skills, scratch worktrees and session logs that agents write into
+# whatever folder they run in. This repo tracks documentation only, so all of it stays out.
+.claude/
+.claude-plugin/
+CLAUDE.local.md
+.codex/
+.serena/
+.superpowers/
+.sidequest/
+.quartermaster/
+.agents/
+.agent/
+.opencode/
+.grok/
+.gemini/
+.cursor/
+.windsurf/
+.continue/
+.roo/
+.cline/
+.clinerules/
+.kiro/
+.aider*
+.copilot/
+.playwright-mcp/
+.worktrees/
+worktrees/
+.sq-shots/
+
+# ---- Local secrets and gitleaks reports (nothing here should ever be committed) ----
+.env
+.env.*
+auth.json
+gitleaks-report.*
+
+# ---- Logs, traces and scratch output from running the fix blocks ----
+*.log
+*.tmp
+*.exe
+*-backup/
+
+# ---- Windows and OneDrive ----
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+~$*
+*.lnk
+
+# ---- macOS, in case someone clones there ----
+.DS_Store
+
+# ---- Editors ----
+.vscode/
+.idea/
+*.swp
+*~

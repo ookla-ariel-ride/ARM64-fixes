@@ -2,13 +2,12 @@
 
 How to get xAI's `grok` CLI working on a Snapdragon X laptop when the native ARM64 build crashes
 with a stack overflow the moment it opens a TLS connection. On the stable channel the fix is to run
-the x64 build under Windows' x64 emulation. The alpha channel now has a native ARM64 build that does
-not crash. This page has the fix first, then the evidence, so it can be re-applied without
-re-deriving it.
+the x64 build under Windows' x64 emulation. The alpha channel has a native ARM64 build that does not
+crash. This page has the fix first, then the evidence, so it can be re-applied without re-deriving
+it.
 
 Last reviewed: 2026-09-15, Grok Build CLI 1.0.30 (stable) and 1.0.32 (alpha), Samsung Galaxy
 Book4 Edge (Snapdragon X Elite), Windows 11 ARM64 Insider build 29667, PowerShell 7.6.5.
-First written: 2026-09-12 on Windows build 29648.
 
 ## Symptom
 
@@ -30,7 +29,7 @@ connection to any xAI host succeeds. Commands that do not open an HTTPS connecti
 The x64 build of the same version does not have the problem. The evidence is under "Diagnosis"
 below.
 
-Which ARM64 builds are affected, as tested on 2026-09-15:
+Which ARM64 builds are affected:
 
 | ARM64 build | Channel | `update --check --json` |
 |---|---|---|
@@ -38,12 +37,13 @@ Which ARM64 builds are affected, as tested on 2026-09-15:
 | 1.0.31 | none (downloadable by URL only) | overflows its stack |
 | 1.0.32 | alpha | returns JSON |
 
-xAI has published nothing about the fix. The upstream repository has issues disabled and no
-releases, and none of its commits since 2026-09-08 mention ARM64, TLS or the stack.
+The 1.0.30 crash reproduces on Windows builds 29648 and 29667. xAI has published nothing about the
+fix: the upstream repository has issues disabled and no releases, and none of its recent commits
+mention ARM64, TLS or the stack.
 
 ## Fix
 
-Two options. Option A stays on the stable channel. Option B goes native on the alpha build.
+Option A keeps the stable channel and runs the x64 build. Option B moves to the native alpha build.
 
 ### Option A: run the x64 build under emulation
 
@@ -102,8 +102,8 @@ Remove-Item $x64
 If the block throws at step 1 or 2, the install is untouched. If it throws at step 3 or 4, the
 backup folder holds the originals and the "Revert" section puts them back.
 
-Nothing else changes: no PATH edit, no registry, no system files. `~\.grok\bin` was already on the
-user PATH from xAI's installer.
+The fix does not touch PATH, the registry or any system file. `~\.grok\bin` is already on the user
+PATH from xAI's installer.
 
 ### Option B: the native ARM64 alpha build
 
@@ -158,10 +158,10 @@ foreach ($f in 'grok.exe', 'agent.exe') {
 Remove-Item $arm
 ```
 
-This block was run on 2026-09-15 against a copy of an option-A install (x64 1.0.30) in a scratch
-folder. It left `grok 1.0.32 (e21ee47a3bbf) [alpha]` plus an `x64-1.0.30-backup` folder, and the
-swapped binary answered `update --check --json` and `-p "reply pong"`. The prompt ran inside
-`grok.exe` with no `agent.exe` child, so the native `agent.exe` was not exercised.
+Run against a copy of an option-A install (x64 1.0.30) in a scratch folder, this block leaves
+`grok 1.0.32 (e21ee47a3bbf) [alpha]` plus an `x64-1.0.30-backup` folder, and the swapped binary
+answers `update --check --json` and `-p "reply pong"`. The prompt runs inside `grok.exe` with no
+`agent.exe` child, so that test does not exercise the native `agent.exe`.
 
 The trade-off is the alpha channel itself, which xAI describes as "faster updates, may have bugs".
 See "Gotchas" for how updates behave after this swap.
@@ -170,7 +170,7 @@ See "Gotchas" for how updates behave after this swap.
 
 ```powershell
 grok --version               # grok 1.0.30 (04b7ffed98c6) [stable]  or  grok 1.0.32 (e21ee47a3bbf) [alpha]
-grok update --check --json   # returns JSON; this command crashed before the swap
+grok update --check --json   # returns JSON; on a crashing build this command overflows
 grok login                   # browser flow, or: grok login --device-code
 Test-Path "$env:USERPROFILE\.grok\auth.json"   # True after login
 ```
@@ -178,27 +178,26 @@ Test-Path "$env:USERPROFILE\.grok\auth.json"   # True after login
 `grok update --check --json` is the right smoke test. It is the smallest command that performs a
 full TLS handshake, and it needs no account.
 
-Run the binary from `~\.grok\bin`. Launched from some other folder, the x64 build opened the
+Run the binary from `~\.grok\bin`. Launched from some other folder, the x64 build opens the
 interactive TUI even for `--version`. That is how it detects an installed layout, and it goes away
-once the file is in place. The ARM64 1.0.32 build answered `--version` normally from a scratch
-folder.
+once the file is in place. The ARM64 1.0.32 build answers `--version` normally from a scratch folder.
 
 ## Gotchas
 
 `grok update` re-downloads the `windows-aarch64` build. On stable that is 1.0.30 and the crash comes
-back. After any update, run `grok update --check --json` before
-anything else; if it overflows, repeat the fix.
+back. After any update, run `grok update --check --json` before anything else; if it overflows,
+repeat the fix.
 
 After option B, the binary still reads the channel from `~\.grok\config.toml`, which says stable
-unless the installer was run with `GROK_CHANNEL=alpha`. On 2026-09-15 its update check answered
+unless the installer was run with `GROK_CHANNEL=alpha`. Its update check answers
 `"currentVersion":"1.0.32","latestVersion":"1.0.30","updateAvailable":false,"channel":"stable"`, so
 it does not offer the older build. `grok update --stable` or `grok update --version 1.0.30` would
 install a crashing build. `grok update --help` lists `--alpha` to switch to the alpha channel, and
-xAI's installer run with `GROK_CHANNEL=alpha` writes `channel = "alpha"` under `[cli]`. Neither was
-run for this page.
+xAI's installer run with `GROK_CHANNEL=alpha` writes `channel = "alpha"` under `[cli]`. Neither has
+been tested with this fix.
 
 The installer also puts `grove.exe`, `grove-credential.exe` and `grove-fsmonitor.exe` in
-`~\.grok\bin`. They are ARM64, neither option touches them, and they were not tested.
+`~\.grok\bin`. They are ARM64, neither option touches them, and they have not been tested.
 
 The `model-gateway` Claude Code plugin reads `~\.grok\auth.json` for its Grok route. A silent revert
 shows up there as "Grok CLI auth is missing. Run `grok` and log in again."
@@ -230,13 +229,10 @@ foreach ($f in 'grok.exe', 'agent.exe') {
 Remove-Item $bak.FullName -Recurse
 ```
 
-On 2026-09-15 this block restored `grok 1.0.30 (04b7ffed98c6) [stable]` from `x64-1.0.30-backup` in
-the scratch copy used to test option B.
-
 ## Diagnosis
 
-This is how the cause was pinned down, in the order it happened, with the commands. Each step is
-cheap and reusable for the next tool that behaves this way.
+How the cause was pinned down, with the commands. Each step is cheap and reusable for the next tool
+that behaves this way.
 
 ### Find the binary and check its architecture
 
@@ -249,8 +245,8 @@ Get-PeMachine "$env:USERPROFILE\.grok\bin\grok.exe"                      # ARM64
 [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture       # Arm64
 ```
 
-The installed binary was native ARM64 and validly signed by X.AI LLC. Note that Git Bash and other
-emulated shells report `AMD64` from `uname`; only the .NET call is trustworthy for the OS.
+The installed binary was native ARM64 and validly signed by X.AI LLC. Git Bash and other emulated
+shells report `AMD64` from `uname`; only the .NET call is trustworthy for the OS.
 
 ### Read the crash records
 
@@ -261,17 +257,17 @@ Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'Applic
 Get-ChildItem "$env:LOCALAPPDATA\CrashDumps" | Where-Object Name -match grok
 ```
 
-Seven events in a few minutes, all `0xC00000FD` in `grok.exe` at fault offset `0x60bcdc8`. The same
-offset every time means the same code site every time, so this is deterministic and not a flake.
-Windows Error Reporting had also written minidumps to `CrashDumps`, but no debugger was installed
-to read them, and the trace log below made that unnecessary.
+There were seven events in a few minutes, all `0xC00000FD` in `grok.exe` at fault offset
+`0x60bcdc8`. The same offset every time means the same code site every time, so this is
+deterministic and not a flake. Windows Error Reporting had also written minidumps to `CrashDumps`,
+but no debugger was installed to read them, and the trace log below made that unnecessary.
 
 Filter on `grok.exe`. The same log can hold fail-fasts from unrelated processes, such as
 `0xC0000409` from `WorkloadsSessionHost.exe`, which have nothing to do with `grok`.
 
 ### Probe commands with a timeout
 
-A TUI takes the console and a login blocks forever, so every probe ran through `Start-Process` with
+A TUI takes the console and a login blocks forever, so every probe runs through `Start-Process` with
 redirected output and a bounded wait. A probe still running at the timeout counts as a pass for a
 command that was going to wait on a person anyway.
 
@@ -292,7 +288,7 @@ Invoke-Probe $g @('doctor')                          # exits 0
 Invoke-Probe $g @('-p', '"reply pong"')              # exits 1, "Not signed in", no crash
 ```
 
-Every command that opens an HTTPS connection died. Every command that does not was fine.
+Every command that opens an HTTPS connection died, and every command that does not ran fine.
 
 ### Read the tool's own trace log
 
@@ -346,20 +342,20 @@ DEBUG rustls::client::hs: ALPN protocol is Some(b"h2")
 WARN  ... Failed to fetch models error=RequestFailed { status: 400, ... "Incorrect API key provided" ...
 ```
 
-Real TLS 1.3 sessions with `api.x.ai`, `auth.x.ai` and `cli-chat-proxy.grok.com`, and real HTTP
-responses. That was enough to apply the swap.
+It completed TLS 1.3 sessions with `api.x.ai`, `auth.x.ai` and `cli-chat-proxy.grok.com` and got
+HTTP responses back, which is the basis for option A.
 
-### Re-check on 2026-09-15
+### Check newer builds
 
-Three days later, after Windows moved from build 29648 to 29667, the channels had moved:
+The channel pointers name the current version, and every build is downloadable by version, including
+ones no channel points at:
 
 ```powershell
 foreach ($c in 'stable', 'alpha') { "$c : " + (curl.exe -fsSL "https://x.ai/cli/$c") }   # stable : 1.0.30, alpha : 1.0.32
 ```
 
-Each ARM64 build was downloaded to its own scratch folder and probed with `Invoke-Probe`. The saved
-ARM64 1.0.30 original still overflowed on the new Windows build, so the OS update had not fixed
-it. 1.0.31, which answers at its URL but is on no channel, overflowed too. 1.0.32 ran cleanly:
+Download each ARM64 build to its own scratch folder and probe it with `Invoke-Probe`. 1.0.30 and
+1.0.31 overflow. 1.0.32 runs cleanly:
 
 ```text
 === update --check --json -> 0x0
@@ -372,12 +368,13 @@ DEBUG run_update_command: rustls::client::hs: ALPN protocol is Some(b"h2")
 pong
 ```
 
-The trace passed the point where 1.0.30 dies, the device-code flow reached `accounts.x.ai`, and a
-signed-in prompt got a model reply. That was enough to add option B.
+The trace passes the point where 1.0.30 dies, the device-code flow reaches `accounts.x.ai`, and a
+signed-in prompt gets a model reply. Option B rests on these results.
 
 ## Related
 
-- `OPENCODE-WINDOWS-ARM64.md`: the same shape of problem in OpenCode, fixed the same way.
+- [`OPENCODE-WINDOWS-ARM64.md`](OPENCODE-WINDOWS-ARM64.md): the same shape of problem in OpenCode,
+  fixed the same way.
 - Installer reference: `https://x.ai/cli/install.ps1` reads the channel from `GROK_CHANNEL`
   (`stable`, `alpha` or `enterprise`), the version from `https://x.ai/cli/<channel>`, downloads
   `grok-<version>-windows-<x86_64|aarch64>.exe`, and installs that one file as both `grok.exe` and

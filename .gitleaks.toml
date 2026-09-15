@@ -1,0 +1,6 @@
+# Gitleaks configuration. Extends the built-in rule set; add repo-specific rules or allowlists below.
+# Docs: https://github.com/gitleaks/gitleaks#configuration
+title = "ARM64-fixes"
+
+[extend]
+useDefault = true
