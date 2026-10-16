@@ -42,7 +42,8 @@ Which ARM64 builds are affected, by the `update --check --json` smoke test:
 | 1.0.52 | stable | returns JSON | 2026-10-15 |
 | 1.0.60 | alpha | returns JSON | 2026-10-15 |
 
-The 1.0.30 crash reproduced on Windows builds 29648 and 29667. xAI has published nothing about it:
+The 1.0.30 crash reproduced on Windows builds 29648, 29667 and 29683. xAI has published nothing
+about it:
 the upstream repository has issues disabled and no releases, and none of its commits mention ARM64,
 TLS or the stack.
 
@@ -61,6 +62,12 @@ that one file to both `~\.grok\bin\grok.exe` and `~\.grok\bin\agent.exe`. It als
 helper executables and a bundled Git beside them, writes `installer = "internal"` (and the channel,
 if not stable) under `[cli]` in `~\.grok\config.toml`, and adds `~\.grok\bin` to the user PATH if it
 is missing. The only `grok` command it runs is `completions powershell`, which does not go online.
+
+This was checked on 2026-10-15 against a copy of the crashing 1.0.30 install, by running the
+installer with `GROK_BIN_DIR` pointed at that folder. Before, `update --check --json` on the copy
+died with `0xC00000FD`; after, the folder held ARM64 1.0.52 as both `grok.exe` and `agent.exe` plus
+the three `grove*` files, and the same command returned JSON. The installer's only effects outside
+the folder were adding it to the user PATH and rewriting `config.toml` with the same content.
 
 `grok update` is the same download once the installed build can reach x.ai, and it is how 1.0.34
 moved to 1.0.52 on the test machine. It leaves the previous binary beside the new one as
@@ -255,8 +262,10 @@ launched bare. On 2026-10-15 both current builds passed:
 {"currentVersion":"1.0.60","latestVersion":"1.0.52","updateAvailable":false,"installer":"internal","channel":"stable","autoUpdate":null,"error":null}
 ```
 
-On 2026-09-15, 1.0.32 was the first ARM64 build to pass. Its device-code login reached
-`accounts.x.ai` and a signed-in `-p "reply pong"` got `pong` back.
+On the installed 1.0.52 the same day, `doctor` exited 0, a signed-in `-p "reply with only the word
+pong"` answered `pong`, `login --device-code` printed a code and waited on `accounts.x.ai`, and the
+trace log showed the TLS 1.3 handshake completing where 1.0.30 died. On 2026-09-15, 1.0.32 was the
+first ARM64 build to pass the same checks.
 
 ## Related
 

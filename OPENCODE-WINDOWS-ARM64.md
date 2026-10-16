@@ -37,8 +37,8 @@ OpenCode is compiled with Bun. Its terminal renderer, OpenTUI, loads a native DL
 FFI, has no ARM64 backend. An OpenCode ARM64 binary built with such a Bun cannot start its renderer.
 Bun 1.4.0 (2026-08-20) replaced TinyCC with an engine-native FFI.
 
-Every `opencode-ai` ARM64 release tested, 1.18.26 through 1.18.31 and 1.19.0, plus the nightly of
-2026-10-14, embeds Bun 1.3.14 and fails. The 1.x release tags still pin `bun@1.3.14`. The repository's
+Every `opencode-ai` ARM64 release from 1.18.26 through 1.19.0, plus the nightly of 2026-10-14,
+embeds Bun 1.3.14 and fails. The 1.x release tags still pin `bun@1.3.14`. The repository's
 `dev` branch moved its publish workflow to Bun 1.4.2 in PR #47446 on 2026-09-05, and that branch is
 what `@opencode/cli` is built from; its first release, 2.0.0, was published on 2026-09-11. The ARM64
 build of 2.0.29 embeds Bun 1.4.2 and starts its TUI.
@@ -60,6 +60,11 @@ npm uninstall -g opencode-ai
 npm install -g @opencode/cli
 opencode --version        # opencode v2.0.29
 ```
+
+That sequence was run in a scratch global prefix (`npm_config_prefix`) on 2026-10-15: the install on
+top of 1.x failed with `EEXIST`, the uninstall removed the `opencode-ai` folder, and the v2 install
+then produced `opencode` and `opencode2` shims that both answer `opencode v2.0.29`. npm warns that
+the package's `postinstall` script is not allowed, and the binary is in place anyway.
 
 v2 also installs the command as `opencode2`. To keep 1.x and try v2 beside it, install v2 into its
 own prefix and put that folder at the end of the user PATH, so `opencode` still runs 1.x and
@@ -157,11 +162,17 @@ And for the user environment:
 [Environment]::SetEnvironmentVariable('OPENCODE_DISABLE_AUTOUPDATE', '1', 'User')
 ```
 
-Both switches come from the 1.x binary's own update check, which returns early when the global
-config has `autoupdate === false` or `OPENCODE_DISABLE_AUTOUPDATE` is set. Neither has been watched
-blocking a real pending upgrade, because no 1.x release newer than the installed one has appeared
-since they were set. Updates then become manual: install the new version, rerun step 1, and run the
-TUI check under "Verify".
+Both switches come from the 1.x binary's own update check, read out of the 1.18.31 executable. When
+the TUI starts, the check returns at once if the global config has `autoupdate === false` or
+`OPENCODE_DISABLE_AUTOUPDATE` is set. Otherwise it reads the latest tag from GitHub's releases API,
+compares it with the running version, and installs it through npm only when the difference is a
+patch release. A minor or major bump, such as 1.18.31 to 1.19.0, only shows an "update available"
+notice. So the swap on 1.19.0 is undone by the next 1.19.x release, and the switches are what stop
+that. They have not been watched blocking a real install: three launches of a scratch x64 1.18.31
+on 2026-10-15, with no switch, the environment switch and the config switch, all left the package at
+1.18.31, because the pending release was the minor bump to 1.19.0 and the control run could not
+upgrade either. Updates then become manual: install the new version, rerun step 1, and run the TUI
+check under "Verify".
 
 ## Verify
 
@@ -227,7 +238,7 @@ This happened twice on the test machine before both switches in step 2 were set.
 `npm i -g opencode-ai`, or any other reinstall of the package also undoes the swap. After any
 update, run the TUI check before trusting it.
 
-Do not pin an older 1.x release to stay native. 1.18.26 through 1.18.29 fail to start the TUI
+Do not pin an older 1.x release to stay native. 1.18.26 through 1.18.35 all fail to start the TUI
 exactly like 1.19.0.
 
 The global install lives under `%APPDATA%\npm`. `Get-Command opencode` shows the shims there
@@ -313,8 +324,8 @@ gh issue list -R anomalyco/opencode --state all --search "TinyCC" --limit 10
 Issues describing this error on Windows ARM64: #19130 (March 2026), #20767 (April), #38520 (July)
 and #45875 (28 August 2026), all closed in October 2026. #45875 is the clearest write-up and names
 two gaps: `bun:ffi` compiled out of Bun 1.3 on `windows-aarch64`, and `bun-pty` 0.4.8 shipping only
-an x64 `rust_pty.dll`. The second was closed with a note that OpenCode now uses `bun-pty` 0.4.11,
-which has not been tested here.
+an x64 `rust_pty.dll`. The second was closed with a note that OpenCode now uses `bun-pty` 0.4.11; the
+shell-tool run under "Test every ARM64 release" is the only check of that made here.
 
 The Bun bump is PR #47446, merged 2026-09-05, which changes the publish workflow's `bun-version`
 to 1.4.2. To see which Bun a tag was built with, read `.github/workflows/publish.yml` at that tag,
@@ -345,13 +356,18 @@ foreach ($v in '1.18.31', '1.19.0') {
 | `opencode-windows-arm64` 1.18.29 | 2026-09-04 | 1.3.14 | exit 0 | FFI error, exit 1 |
 | `opencode-windows-arm64` 1.18.30 | 2026-09-09 | 1.3.14 | exit 0 | FFI error, exit 1 |
 | `opencode-windows-arm64` 1.18.31 | 2026-09-14 | 1.3.14 | exit 0 | FFI error, exit 1 |
+| `opencode-windows-arm64` 1.18.32 | 2026-09-21 | 1.3.14 | exit 0 | FFI error, exit 1 |
+| `opencode-windows-arm64` 1.18.33 | 2026-09-28 | 1.3.14 | exit 0 | FFI error, exit 1 |
+| `opencode-windows-arm64` 1.18.34 | 2026-09-30 | 1.3.14 | exit 0 | FFI error, exit 1 |
+| `opencode-windows-arm64` 1.18.35 | 2026-10-06 | 1.3.14 | exit 0 | FFI error, exit 1 |
 | `opencode-windows-arm64` 1.19.0 | 2026-10-11 | 1.3.14 | exit 0 | FFI error, exit 1 |
 | `opencode-windows-arm64` 0.0.0-dev-202610141901 | 2026-10-14 | 1.3.14 | | FFI error, exit 1 |
 | `opencode-windows-x64` 1.19.0, emulated | 2026-10-11 | 1.3.14 | | still running at 15 s |
 | `@opencode/cli-windows-arm64` 2.0.29 | 2026-10-14 | 1.4.2 | exit 0 | still running at 20 s |
 
-1.18.32 through 1.18.35 were not tested. The v2 binary also answered `models` and a `run` prompt
-against one of the free `opencode/*` models with no credentials configured.
+The v2 binary also answered `models`, and with no credentials configured it ran two `run` prompts
+against the free `opencode/deepseek-v4.1-flash-free` model: a plain reply, and one that made it
+execute `echo pty-ok-7731` through its shell tool and return the output.
 
 ### Confirm with the x64 build
 
