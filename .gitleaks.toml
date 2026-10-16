@@ -1,6 +1,6 @@
 # Gitleaks configuration. Extends the built-in rule set; add repo-specific rules or allowlists below.
 # Docs: https://github.com/gitleaks/gitleaks#configuration
-title = "ARM64-fixes"
+title = "windows-on-arm-fixes"
 
 [extend]
 useDefault = true
