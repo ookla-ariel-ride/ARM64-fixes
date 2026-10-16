@@ -1,10 +1,10 @@
-# ARM64-fixes
+# windows-on-arm-fixes
 
 Tested workarounds for developer CLIs that fail on Windows on ARM laptops, with the evidence that
 found each cause and the commands to check whether a fix is still needed.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![gitleaks](https://img.shields.io/github/actions/workflow/status/ookla-ariel-ride/ARM64-fixes/gitleaks.yml?label=gitleaks)](https://github.com/ookla-ariel-ride/ARM64-fixes/actions/workflows/gitleaks.yml)
+[![gitleaks](https://img.shields.io/github/actions/workflow/status/ookla-ariel-ride/windows-on-arm-fixes/gitleaks.yml?label=gitleaks)](https://github.com/ookla-ariel-ride/windows-on-arm-fixes/actions/workflows/gitleaks.yml)
 
 ## About
 
